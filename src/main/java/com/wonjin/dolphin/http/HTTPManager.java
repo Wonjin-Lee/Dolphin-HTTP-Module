@@ -2,12 +2,19 @@ package com.wonjin.dolphin.http;
 
 import com.wonjin.dolphin.constants.HTTPConstants;
 import com.wonjin.dolphin.http.protocol.Protocol;
+import com.wonjin.dolphin.util.StringUtil;
+import org.apache.http.client.config.RequestConfig;
+import org.apache.http.client.methods.CloseableHttpResponse;
+import org.apache.http.client.methods.HttpGet;
+import org.apache.http.client.methods.HttpPost;
+import org.apache.http.client.methods.HttpRequestBase;
 import org.apache.http.config.Registry;
 import org.apache.http.config.RegistryBuilder;
 import org.apache.http.conn.socket.ConnectionSocketFactory;
 import org.apache.http.conn.socket.PlainConnectionSocketFactory;
 import org.apache.http.conn.ssl.NoopHostnameVerifier;
 import org.apache.http.conn.ssl.SSLConnectionSocketFactory;
+import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.impl.client.LaxRedirectStrategy;
@@ -17,6 +24,9 @@ import org.apache.http.ssl.TrustStrategy;
 import org.apache.log4j.Logger;
 
 import javax.net.ssl.SSLContext;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
 import java.security.KeyManagementException;
 import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
@@ -45,6 +55,104 @@ public class HTTPManager {
 
     private Map<String, String> headerMap;
     private Map<String, String> parameterMap;
+
+    private CloseableHttpClient httpClient;
+    private CloseableHttpResponse httpResponse;
+
+    private String responseBodyText = "";
+
+    /**
+     * GET 방식을 사용하여 HTTP 요청 보내는 메서드
+     */
+    public String get() throws NoSuchAlgorithmException, KeyStoreException, KeyManagementException, IOException {
+        try {
+            httpClient = getClient();
+
+            String queryString = StringUtil.mapToHttpString(parameterMap);
+
+            HttpGet httpGet = new HttpGet(url + "?" + queryString);
+
+            RequestConfig requestConfig = RequestConfig.copy(RequestConfig.DEFAULT).setConnectionRequestTimeout(connectionRequestTimeout)
+                    .setConnectTimeout(connectionTimeout).setSocketTimeout(socketTimeout).build();
+
+            httpGet.setConfig(requestConfig);
+
+            setHeader(httpGet);
+
+            httpResponse = httpClient.execute(httpGet);
+
+            StringBuilder responseBuilder = new StringBuilder();
+
+            try (BufferedReader reader = new BufferedReader(new InputStreamReader(httpResponse.getEntity().getContent()))) {
+                String inputLine;
+
+                while ((inputLine = reader.readLine()) != null) {
+                    responseBuilder.append(inputLine);
+                }
+            }
+
+            responseBodyText = responseBuilder.toString();
+
+            return responseBodyText;
+        } finally {
+            if (httpResponse != null) {
+                httpResponse.close();
+            }
+        }
+    }
+
+    /**
+     * POST 방식을 사용하여 HTTP 요청 보내는 메서드
+     */
+    public String post() throws NoSuchAlgorithmException, KeyStoreException, KeyManagementException, IOException {
+        try {
+            httpClient = getClient();
+
+            HttpPost httpPost = new HttpPost(url);
+
+            RequestConfig requestConfig = RequestConfig.copy(RequestConfig.DEFAULT).setConnectionRequestTimeout(connectionRequestTimeout)
+                    .setConnectTimeout(connectionTimeout).setSocketTimeout(socketTimeout).build();
+
+            httpPost.setConfig(requestConfig);
+
+            setHeader(httpPost);
+
+            String parameterString = StringUtil.mapToHttpString(parameterMap);
+
+            httpPost.setEntity(new StringEntity(parameterString));
+
+            httpResponse = httpClient.execute(httpPost);
+
+            StringBuilder responseBuilder = new StringBuilder();
+
+            try (BufferedReader reader = new BufferedReader(new InputStreamReader(httpResponse.getEntity().getContent()))) {
+                String inputLine;
+
+                while ((inputLine = reader.readLine()) != null) {
+                    responseBuilder.append(inputLine);
+                }
+            }
+
+            responseBodyText = responseBuilder.toString();
+
+            return responseBodyText;
+        } finally {
+            if (httpResponse != null) {
+                httpResponse.close();
+            }
+        }
+    }
+
+    /**
+     * Header Setting
+     */
+    private void setHeader(HttpRequestBase httpRequestBase) {
+        if (headerMap != null) {
+            for (Map.Entry<String, String> entry : headerMap.entrySet()) {
+                httpRequestBase.addHeader(entry.getKey(), entry.getValue());
+            }
+        }
+    }
 
     /**
      * Create HTTP/HTTPS Client
