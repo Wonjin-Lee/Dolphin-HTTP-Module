@@ -1,5 +1,6 @@
 package com.wonjin.dolphin.http;
 
+import com.wonjin.dolphin.constants.HTTPConstants;
 import com.wonjin.dolphin.http.protocol.Protocol;
 import org.apache.http.config.Registry;
 import org.apache.http.config.RegistryBuilder;
@@ -26,20 +27,21 @@ import java.util.Map;
 public class HTTPManager {
     private static Logger logger = Logger.getLogger(HTTPManager.class);
 
-    private int maxConnectionsPerRoute;
-    private int maxConnectionsTotal;
+    private int maxConnectionsPerRoute = 50;
+    private int maxConnectionsTotal = 100;
 
-    private int connectionTimeout;
-    private int connectionRequestTimeout;
-    private int socketTimeout;
+    private int connectionTimeout = 5000;
+    private int connectionRequestTimeout = 5000;
+    private int socketTimeout = 5000;
 
-    private Protocol protocol;
+    // Default : HTTPS
+    private Protocol protocol = Protocol.HTTPS;
 
     private String tlsVersion;
     private String[] supportedProtocols;
     private String[] supportedCipherSuites;
 
-    private String url;
+    private String url = "";
 
     private Map<String, String> headerMap;
     private Map<String, String> parameterMap;
@@ -78,7 +80,15 @@ public class HTTPManager {
             }
         };
 
+        if (tlsVersion == null) {
+            tlsVersion = HTTPConstants.TLSv1_2;
+        }
+
         SSLContext sslContext = new SSLContextBuilder().loadTrustMaterial(null, trustStrategy).useProtocol(tlsVersion).build();
+
+        if (supportedProtocols == null) {
+            supportedProtocols = new String[] {HTTPConstants.TLSv1_1, HTTPConstants.TLSv1_2};
+        }
 
         SSLConnectionSocketFactory sslConnectionSocketFactory
                 = new SSLConnectionSocketFactory(sslContext, supportedProtocols, supportedCipherSuites, new NoopHostnameVerifier());
