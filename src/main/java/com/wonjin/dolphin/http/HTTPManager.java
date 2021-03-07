@@ -96,6 +96,28 @@ public class HTTPManager {
         return HttpClients.custom().setSSLContext(sslContext).setConnectionManager(connectionManager).build();
     }
 
+    public void setProtocol(Protocol protocol) {
+        this.protocol = protocol;
+    }
+
+    public void setProtocol(Protocol protocol, String tlsVersion) {
+        this.protocol = protocol;
+        this.tlsVersion = tlsVersion;
+    }
+
+    public void setProtocol(Protocol protocol, String tlsVersion, String[] supportedProtocols) {
+        this.protocol = protocol;
+        this.tlsVersion = tlsVersion;
+        this.supportedProtocols = supportedProtocols;
+    }
+
+    public void setProtocol(Protocol protocol, String tlsVersion, String[] supportedProtocols, String[] supportedCipherSuites) {
+        this.protocol = protocol;
+        this.tlsVersion = tlsVersion;
+        this.supportedProtocols = supportedProtocols
+        this.supportedCipherSuites = supportedCipherSuites;
+    }
+
     public void setMaxConnectionsPerRoute(int maxConnectionsPerRoute) {
         this.maxConnectionsPerRoute = maxConnectionsPerRoute;
     }
@@ -114,10 +136,6 @@ public class HTTPManager {
 
     public void setSocketTimeout(int socketTimeout) {
         this.socketTimeout = socketTimeout;
-    }
-
-    public void setProtocol(Protocol protocol) {
-        this.protocol = protocol;
     }
 
     public void setUrl(String url) {
