@@ -114,7 +114,7 @@ public class HTTPManager {
     public void setProtocol(Protocol protocol, String tlsVersion, String[] supportedProtocols, String[] supportedCipherSuites) {
         this.protocol = protocol;
         this.tlsVersion = tlsVersion;
-        this.supportedProtocols = supportedProtocols
+        this.supportedProtocols = supportedProtocols;
         this.supportedCipherSuites = supportedCipherSuites;
     }
 
