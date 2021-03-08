@@ -2,6 +2,7 @@ package com.wonjin.dolphin.http;
 
 import com.wonjin.dolphin.constants.HTTPConstants;
 import com.wonjin.dolphin.http.protocol.Protocol;
+import com.wonjin.dolphin.util.LogUtil;
 import com.wonjin.dolphin.util.StringUtil;
 import org.apache.http.client.config.RequestConfig;
 import org.apache.http.client.methods.CloseableHttpResponse;
@@ -95,6 +96,8 @@ public class HTTPManager {
 
             return responseBodyText;
         } finally {
+            printOneLineLog();
+
             if (httpResponse != null) {
                 httpResponse.close();
             }
@@ -137,6 +140,8 @@ public class HTTPManager {
 
             return responseBodyText;
         } finally {
+            printOneLineLog();
+
             if (httpResponse != null) {
                 httpResponse.close();
             }
@@ -266,5 +271,22 @@ public class HTTPManager {
 
     public void setParameterMap(Map<String, String> parameterMap) {
         this.parameterMap = parameterMap;
+    }
+
+    public void printOneLineLog() {
+        // Request Header
+        String requestHeaderText = LogUtil.mapToLogString(headerMap);
+
+        // Request Body
+        String requestBodyText = LogUtil.mapToLogString(parameterMap);
+
+        // Response Header
+        String responseHeaderText = "";
+        if (httpResponse != null) {
+            responseHeaderText = LogUtil.headerToLogString(httpResponse.getAllHeaders());
+        }
+
+        logger.debug("[HTTP OneLineLog] <URL> " + url + " <Request Header> " + requestHeaderText + " <Request Body> " + requestBodyText
+                + " <Response Header> " + responseHeaderText + " <Response Body> " + responseBodyText);
     }
 }
