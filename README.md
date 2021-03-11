@@ -83,11 +83,12 @@ public class Example {
         // Request Header 설정
         httpManager.setHeader(headerMap);
         
-        Map<String, String> parameterMap = new HashMap<>();
-        parameterMap.put("NAME", "Wonjin");
-        
         // Request Parameter 설정
-        httpManager.setParameter(parameterMap);
+        String parameterString;
+        parameterString = "name=wonjin&age=28&address=seoul"; // KVP
+        parameterString = "<xml><name>wonjin</name><age>28</age><address>seoul</address></xml>"; // XML
+
+        httpManager.setParameter(parameterString);
         
         String response;
         // GET 방식으로 요청 (응답 엔티티 본문을 문자열로 반환)
@@ -122,6 +123,7 @@ public class Example {
 ```xml
 <logger name="org.apache.commons.httpclient" additivity="true">
 	<level value="DEBUG" />
+        <appender-ref ref="HTTP_LOG" />
 </logger>
 	
 <logger name="httpclient.wire" additivity="true">
@@ -132,3 +134,4 @@ public class Example {
 
 ## Release Note
 * 1.0.0 - Deploy First Version
+* 1.1.0 - 모듈성을 높이기 위해 요청 파라미터를 문자열 형태로 세팅하도록 변경
