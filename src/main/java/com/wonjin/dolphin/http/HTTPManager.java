@@ -55,7 +55,7 @@ public class HTTPManager {
     private String url = "";
 
     private Map<String, String> headerMap;
-    private Map<String, String> parameterMap;
+    private String parameterString;
 
     private CloseableHttpClient httpClient;
     private CloseableHttpResponse httpResponse;
@@ -69,9 +69,7 @@ public class HTTPManager {
         try {
             httpClient = getClient();
 
-            String queryString = StringUtil.mapToHttpString(parameterMap);
-
-            HttpGet httpGet = new HttpGet(url + "?" + queryString);
+            HttpGet httpGet = new HttpGet(url + "?" + parameterString);
 
             RequestConfig requestConfig = RequestConfig.copy(RequestConfig.DEFAULT).setConnectionRequestTimeout(connectionRequestTimeout)
                     .setConnectTimeout(connectionTimeout).setSocketTimeout(socketTimeout).build();
@@ -119,8 +117,6 @@ public class HTTPManager {
             httpPost.setConfig(requestConfig);
 
             setHeader(httpPost);
-
-            String parameterString = StringUtil.mapToHttpString(parameterMap);
 
             httpPost.setEntity(new StringEntity(parameterString));
 
@@ -269,8 +265,8 @@ public class HTTPManager {
         this.headerMap = headerMap;
     }
 
-    public void setParameterMap(Map<String, String> parameterMap) {
-        this.parameterMap = parameterMap;
+    public void setParameter(String parameterString) {
+        this.parameterString = parameterString;
     }
 
     public void printOneLineLog() {
@@ -278,7 +274,7 @@ public class HTTPManager {
         String requestHeaderText = LogUtil.mapToLogString(headerMap);
 
         // Request Body
-        String requestBodyText = LogUtil.mapToLogString(parameterMap);
+        String requestBodyText = parameterString;
 
         // Response Header
         String responseHeaderText = "";
