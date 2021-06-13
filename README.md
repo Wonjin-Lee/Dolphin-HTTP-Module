@@ -1,13 +1,15 @@
 ## Dolphin HTTP Module 소개
 
-Apache Components의 HttpClient를 활용하여 만든 HTTP 통신 모듈입니다.
+Apache Components의 HttpClient를 활용하여 만든 HTTP 클라이언트입니다.
 
 * HTTP, HTTPS 통신 지원
 * GET, POST 메서드 지원
 * TLS Version 설정 가능
 * Supported Protocols 설정 가능
 * Supported Cipher Suites 설정 가능
-* Connection Pool 관련 설정 가능 
+* KeyStore(Certificate) 로딩 기능 지원
+* Connection Pool 관련 설정 가능
+* 재시도 횟수(Retry Count) 설정 기능 
 * log4j를 이용한 로깅 지원
 * One Line Log 출력
 
@@ -28,6 +30,7 @@ Apache Components의 HttpClient를 활용하여 만든 HTTP 통신 모듈입니�
 import com.wonjin.dolphin.http.HTTPManager;
 import com.wonjin.dolphin.constants.HTTPConstants;
 import com.wonjin.dolphin.http.protocol.Protocol;
+import java.io.InputStream;import java.security.KeyStore;
 
 public class Example {
     public static void main(String[] args) {
@@ -76,12 +79,29 @@ public class Example {
         
         // Read Timeout 설정 (Default는 5000)
         httpManager.setSocketTimeout(5000);
+       
+        // KeyStore 설정
+        String filePath = "/home/service/payment/WEB-INF/cert/certifcate.p12";
+        String password = "1234567890";
+
+        KeyStore keyStore = KeyStore.getInstance("PKCS12");
+        try (InputStream keyStoreStream = this.getClass.getResoureAsStream(filePath)) {
+            keyStore.load(keyStoreStream, password.toCharArray());
+        }
+
+        httpManager.setKeyStore(keyStore, password);
+
+        // Retry Count 설정 (Default는 2)
+        httpManager.setRetryCount(3);
         
         Map<String, String> headerMap = new HashMap<>();
         headerMap.put("Content-Type", "application/x-www-form-urlencoded;charset=utf-8");
         
         // Request Header 설정
         httpManager.setHeader(headerMap);
+
+        // Charset 설정 (Default는 UTF-8)
+        httpManager.setCharset("UTF-8");
         
         // Request Parameter 설정
         String parameterString;
@@ -135,3 +155,4 @@ public class Example {
 ## Release Note
 * 1.0.0 - Deploy First Version
 * 1.1.0 - 모듈성을 높이기 위해 요청 파라미터를 문자열 형태로 세팅하도록 변경
+* 1.2.0 - KeyStore(Certificate) 로드 기능, 재시도 횟수 설정 기능 추가
