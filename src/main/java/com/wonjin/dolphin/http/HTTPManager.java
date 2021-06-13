@@ -3,12 +3,15 @@ package com.wonjin.dolphin.http;
 import com.wonjin.dolphin.constants.HTTPConstants;
 import com.wonjin.dolphin.http.protocol.Protocol;
 import com.wonjin.dolphin.util.LogUtil;
-import com.wonjin.dolphin.util.StringUtil;
+import org.apache.http.HttpEntityEnclosingRequest;
+import org.apache.http.HttpRequest;
+import org.apache.http.client.HttpRequestRetryHandler;
 import org.apache.http.client.config.RequestConfig;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.client.methods.HttpRequestBase;
+import org.apache.http.client.protocol.HttpClientContext;
 import org.apache.http.config.Registry;
 import org.apache.http.config.RegistryBuilder;
 import org.apache.http.conn.socket.ConnectionSocketFactory;
@@ -20,6 +23,7 @@ import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.impl.client.LaxRedirectStrategy;
 import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
+import org.apache.http.protocol.HttpContext;
 import org.apache.http.ssl.SSLContextBuilder;
 import org.apache.http.ssl.TrustStrategy;
 import org.apache.log4j.Logger;
@@ -28,6 +32,8 @@ import javax.net.ssl.SSLContext;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.InterruptedIOException;
+import java.net.UnknownHostException;
 import java.security.KeyManagementException;
 import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
@@ -44,6 +50,8 @@ public class HTTPManager {
     private int connectionTimeout = 5000;
     private int connectionRequestTimeout = 5000;
     private int socketTimeout = 5000;
+
+    private int retryCount = 2;
 
     // Default : HTTPS
     private Protocol protocol = Protocol.HTTPS;
@@ -155,6 +163,35 @@ public class HTTPManager {
         }
     }
 
+    private HttpRequestRetryHandler createRetryHandler(final int retryCount) {
+        return new HttpRequestRetryHandler() {
+            @Override
+            public boolean retryRequest(IOException exception, int executionCount, HttpContext context) {
+                if (executionCount >= retryCount) {
+                    return false;
+                }
+
+                if (exception instanceof InterruptedIOException) { // Interrupted
+                    return false;
+                }
+
+                if (exception instanceof UnknownHostException) { // Unknown host
+                    return false;
+                }
+
+                HttpClientContext clientContext = HttpClientContext.adapt(context);
+                HttpRequest request = clientContext.getRequest();
+                boolean idempotent = !(request instanceof HttpEntityEnclosingRequest);
+
+                if (idempotent) {
+                    return true;
+                }
+
+                return false;
+            }
+        };
+    }
+
     /**
      * Create HTTP/HTTPS Client
      */
@@ -174,7 +211,7 @@ public class HTTPManager {
         connectionManager.setMaxTotal(maxConnectionsTotal);
         connectionManager.setDefaultMaxPerRoute(maxConnectionsPerRoute);
 
-        return HttpClients.custom().setConnectionManager(connectionManager)
+        return HttpClients.custom().setConnectionManager(connectionManager).setRetryHandler(createRetryHandler(retryCount))
                 .setRedirectStrategy(new LaxRedirectStrategy()).build();
     }
 
@@ -212,7 +249,7 @@ public class HTTPManager {
         connectionManager.setMaxTotal(maxConnectionsTotal);
         connectionManager.setDefaultMaxPerRoute(maxConnectionsPerRoute);
 
-        return HttpClients.custom().setSSLContext(sslContext).setConnectionManager(connectionManager).build();
+        return HttpClients.custom().setSSLContext(sslContext).setConnectionManager(connectionManager).setRetryHandler(createRetryHandler(retryCount)).build();
     }
 
     public void setProtocol(Protocol protocol) {
@@ -255,6 +292,10 @@ public class HTTPManager {
 
     public void setSocketTimeout(int socketTimeout) {
         this.socketTimeout = socketTimeout;
+    }
+
+    public void setRetryCount(int retryCount) {
+        this.retryCount = retryCount;
     }
 
     public void setUrl(String url) {
