@@ -1,7 +1,7 @@
 package com.wonjin.dolphin.http;
 
-import com.wonjin.dolphin.constants.HTTPConstants;
 import com.wonjin.dolphin.http.protocol.Protocol;
+import com.wonjin.dolphin.http.protocol.ProtocolVersion;
 import com.wonjin.dolphin.util.LogUtil;
 import org.apache.http.HttpEntityEnclosingRequest;
 import org.apache.http.HttpRequest;
@@ -222,13 +222,13 @@ public class HTTPManager {
         };
 
         if (tlsVersion == null) {
-            tlsVersion = HTTPConstants.TLSv1_2;
+            tlsVersion = ProtocolVersion.TLS_1_2.getTLSVersion();
         }
 
         SSLContext sslContext = new SSLContextBuilder().loadKeyMaterial(keyStore, keyStorePassword.toCharArray()).loadTrustMaterial(trustStrategy).useProtocol(tlsVersion).build();
 
         if (supportedProtocols == null) {
-            supportedProtocols = new String[] {HTTPConstants.TLSv1_1, HTTPConstants.TLSv1_2};
+            supportedProtocols = new String[] {ProtocolVersion.TLS_1_1.getTLSVersion(), ProtocolVersion.TLS_1_2.getTLSVersion()};
         }
 
         SSLConnectionSocketFactory sslConnectionSocketFactory
@@ -286,20 +286,20 @@ public class HTTPManager {
         this.protocol = protocol;
     }
 
-    public void setProtocol(Protocol protocol, String tlsVersion) {
+    public void setProtocol(Protocol protocol, ProtocolVersion protocolVersion) {
         this.protocol = protocol;
-        this.tlsVersion = tlsVersion;
+        this.tlsVersion = protocolVersion.getTLSVersion();
     }
 
-    public void setProtocol(Protocol protocol, String tlsVersion, String[] supportedProtocols) {
+    public void setProtocol(Protocol protocol, ProtocolVersion protocolVersion, String[] supportedProtocols) {
         this.protocol = protocol;
-        this.tlsVersion = tlsVersion;
+        this.tlsVersion = protocolVersion.getTLSVersion();
         this.supportedProtocols = supportedProtocols;
     }
 
-    public void setProtocol(Protocol protocol, String tlsVersion, String[] supportedProtocols, String[] supportedCipherSuites) {
+    public void setProtocol(Protocol protocol, ProtocolVersion protocolVersion, String[] supportedProtocols, String[] supportedCipherSuites) {
         this.protocol = protocol;
-        this.tlsVersion = tlsVersion;
+        this.tlsVersion = protocolVersion.getTLSVersion();
         this.supportedProtocols = supportedProtocols;
         this.supportedCipherSuites = supportedCipherSuites;
     }
