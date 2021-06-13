@@ -40,6 +40,9 @@ import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.util.Map;
 
+/**
+ * HTTP 통신을 위한 클라이언트 클래스.
+ */
 public class HTTPManager {
     private static Logger logger = Logger.getLogger(HTTPManager.class);
 
@@ -76,7 +79,11 @@ public class HTTPManager {
 
 
     /**
-     * GET 방식을 사용하여 HTTP 요청 보내는 메서드
+     * GET 방식을 사용하여 HTTP 요청 보낸 후 Response Body를 문자열 형태로 반환한다.
+     *
+     * @return	HTTP 요청에 대한 응답으로 받은 문자열 형태의 Response Body
+     * @throws	IOException
+     * @throws	GeneralSecurityException
      */
     public String get() throws IOException, GeneralSecurityException {
         try {
@@ -116,7 +123,11 @@ public class HTTPManager {
     }
 
     /**
-     * POST 방식을 사용하여 HTTP 요청 보내는 메서드
+     * POST 방식을 사용하여 HTTP 요청 보낸 후 Response Body를 문자열 형태로 반환한다.
+     *
+     * @return	HTTP 요청에 대한 응답으로 받은 문자열 형태의 Response Body
+     * @throws	IOException
+     * @throws	GeneralSecurityException
      */
     public String post() throws IOException, GeneralSecurityException {
         try {
@@ -158,7 +169,7 @@ public class HTTPManager {
     }
 
     /**
-     * Header Setting
+     * 멤버변수 headerMap에 저장된 헤더값을 인자로 들어온 Request 인스턴스에 세팅한다.
      */
     private void setHeader(HttpRequestBase httpRequestBase) {
         if (headerMap != null) {
@@ -168,37 +179,11 @@ public class HTTPManager {
         }
     }
 
-    private HttpRequestRetryHandler createRetryHandler(final int retryCount) {
-        return new HttpRequestRetryHandler() {
-            @Override
-            public boolean retryRequest(IOException exception, int executionCount, HttpContext context) {
-                if (executionCount >= retryCount) {
-                    return false;
-                }
-
-                if (exception instanceof InterruptedIOException) { // Interrupted
-                    return false;
-                }
-
-                if (exception instanceof UnknownHostException) { // Unknown host
-                    return false;
-                }
-
-                HttpClientContext clientContext = HttpClientContext.adapt(context);
-                HttpRequest request = clientContext.getRequest();
-                boolean idempotent = !(request instanceof HttpEntityEnclosingRequest);
-
-                if (idempotent) {
-                    return true;
-                }
-
-                return false;
-            }
-        };
-    }
-
     /**
-     * Create HTTP/HTTPS Client
+     * 설정된 통신 프로토콜(멤버변수 protocol)에 기반하여 HttpClient를 생성한 뒤 반환한다.
+     *
+     * @throws	GeneralSecurityException
+     * @return	설정된 통신 프로토콜에 기반한 CloseableHttpClient 인스턴스
      */
     private CloseableHttpClient getClient() throws GeneralSecurityException {
         if (Protocol.HTTP == protocol) {
@@ -208,7 +193,9 @@ public class HTTPManager {
     }
 
     /**
-     * HTTP Client
+     * HTTP 프로토콜 기반의 HttpClient를 생성한 뒤 반환한다.
+     *
+     * @return	HTTP 프로토콜 기반의 CloseableHttpClient 인스턴스
      */
     private CloseableHttpClient createHttpClient() {
         PoolingHttpClientConnectionManager connectionManager = new PoolingHttpClientConnectionManager();
@@ -221,7 +208,10 @@ public class HTTPManager {
     }
 
     /**
-     * SSL HTTP Client
+     * HTTPS 프로토콜 기반의 HttpClient를 생성한 뒤 반환한다.
+     *
+     * @return	HTTPS 프로토콜 기반의 CloseableHttpClient 인스턴스
+     * @throws	GeneralSecurityException
      */
     private CloseableHttpClient createSSLHttpClient() throws GeneralSecurityException {
         TrustStrategy trustStrategy = new TrustStrategy() {
@@ -255,6 +245,41 @@ public class HTTPManager {
         connectionManager.setDefaultMaxPerRoute(maxConnectionsPerRoute);
 
         return HttpClients.custom().setSSLContext(sslContext).setConnectionManager(connectionManager).setRetryHandler(createRetryHandler(retryCount)).build();
+    }
+
+    /**
+     * HTTP 통신이 실패할 경우 인자로 받은 재시도 횟수 만큼 다시 요청하는 Retry Handler를 생성 후 반환한다.
+     *
+     * @param	IOException 발생할 경우 재시도할 횟수
+     * @return	HttpRequestRetryHandler 구현체
+     */
+    private HttpRequestRetryHandler createRetryHandler(final int retryCount) {
+        return new HttpRequestRetryHandler() {
+            @Override
+            public boolean retryRequest(IOException exception, int executionCount, HttpContext context) {
+                if (executionCount >= retryCount) {
+                    return false;
+                }
+
+                if (exception instanceof InterruptedIOException) { // Interrupted
+                    return false;
+                }
+
+                if (exception instanceof UnknownHostException) { // Unknown host
+                    return false;
+                }
+
+                HttpClientContext clientContext = HttpClientContext.adapt(context);
+                HttpRequest request = clientContext.getRequest();
+                boolean idempotent = !(request instanceof HttpEntityEnclosingRequest);
+
+                if (idempotent) {
+                    return true;
+                }
+
+                return false;
+            }
+        };
     }
 
     public void setProtocol(Protocol protocol) {
@@ -324,6 +349,9 @@ public class HTTPManager {
         this.charset = charset;
     }
 
+    /**
+     * HTTP 통신 과정에서 주고 받은 요청, 응답 메시지에 대한 로그를 출력한다.
+     */
     public void printOneLineLog() {
         // Request Header
         String requestHeaderText = LogUtil.mapToLogString(headerMap);
