@@ -34,9 +34,8 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.InterruptedIOException;
 import java.net.UnknownHostException;
-import java.security.KeyManagementException;
-import java.security.KeyStoreException;
-import java.security.NoSuchAlgorithmException;
+import java.security.GeneralSecurityException;
+import java.security.KeyStore;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.util.Map;
@@ -60,6 +59,9 @@ public class HTTPManager {
     private String[] supportedProtocols;
     private String[] supportedCipherSuites;
 
+    private KeyStore keyStore;
+    private String keyStorePassword = "";
+
     private String url = "";
 
     private Map<String, String> headerMap;
@@ -76,7 +78,7 @@ public class HTTPManager {
     /**
      * GET 방식을 사용하여 HTTP 요청 보내는 메서드
      */
-    public String get() throws NoSuchAlgorithmException, KeyStoreException, KeyManagementException, IOException {
+    public String get() throws IOException, GeneralSecurityException {
         try {
             httpClient = getClient();
 
@@ -116,7 +118,7 @@ public class HTTPManager {
     /**
      * POST 방식을 사용하여 HTTP 요청 보내는 메서드
      */
-    public String post() throws NoSuchAlgorithmException, KeyStoreException, KeyManagementException, IOException {
+    public String post() throws IOException, GeneralSecurityException {
         try {
             httpClient = getClient();
 
@@ -198,7 +200,7 @@ public class HTTPManager {
     /**
      * Create HTTP/HTTPS Client
      */
-    private CloseableHttpClient getClient() throws KeyStoreException, NoSuchAlgorithmException, KeyManagementException {
+    private CloseableHttpClient getClient() throws GeneralSecurityException {
         if (Protocol.HTTP == protocol) {
             return createHttpClient();
         }
@@ -221,7 +223,7 @@ public class HTTPManager {
     /**
      * SSL HTTP Client
      */
-    private CloseableHttpClient createSSLHttpClient() throws KeyStoreException, NoSuchAlgorithmException, KeyManagementException {
+    private CloseableHttpClient createSSLHttpClient() throws GeneralSecurityException {
         TrustStrategy trustStrategy = new TrustStrategy() {
             @Override
             public boolean isTrusted(X509Certificate[] chain, String authTypes) throws CertificateException {
@@ -233,7 +235,7 @@ public class HTTPManager {
             tlsVersion = HTTPConstants.TLSv1_2;
         }
 
-        SSLContext sslContext = new SSLContextBuilder().loadTrustMaterial(null, trustStrategy).useProtocol(tlsVersion).build();
+        SSLContext sslContext = new SSLContextBuilder().loadKeyMaterial(keyStore, keyStorePassword.toCharArray()).loadTrustMaterial(trustStrategy).useProtocol(tlsVersion).build();
 
         if (supportedProtocols == null) {
             supportedProtocols = new String[] {HTTPConstants.TLSv1_1, HTTPConstants.TLSv1_2};
@@ -275,6 +277,11 @@ public class HTTPManager {
         this.tlsVersion = tlsVersion;
         this.supportedProtocols = supportedProtocols;
         this.supportedCipherSuites = supportedCipherSuites;
+    }
+
+    public void setKeyStore(KeyStore keyStore, String keyStorePassword) {
+        this.keyStore = keyStore;
+        this.keyStorePassword = keyStorePassword;
     }
 
     public void setMaxConnectionsPerRoute(int maxConnectionsPerRoute) {
