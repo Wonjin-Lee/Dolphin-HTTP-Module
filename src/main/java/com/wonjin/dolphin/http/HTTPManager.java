@@ -63,12 +63,15 @@ public class HTTPManager {
     private String url = "";
 
     private Map<String, String> headerMap;
+    
     private String parameterString;
+    private String charset = "UTF-8";
 
     private CloseableHttpClient httpClient;
     private CloseableHttpResponse httpResponse;
 
     private String responseBodyText = "";
+
 
     /**
      * GET 방식을 사용하여 HTTP 요청 보내는 메서드
@@ -90,7 +93,7 @@ public class HTTPManager {
 
             StringBuilder responseBuilder = new StringBuilder();
 
-            try (BufferedReader reader = new BufferedReader(new InputStreamReader(httpResponse.getEntity().getContent()))) {
+            try (BufferedReader reader = new BufferedReader(new InputStreamReader(httpResponse.getEntity().getContent(), charset))) {
                 String inputLine;
 
                 while ((inputLine = reader.readLine()) != null) {
@@ -132,7 +135,7 @@ public class HTTPManager {
 
             StringBuilder responseBuilder = new StringBuilder();
 
-            try (BufferedReader reader = new BufferedReader(new InputStreamReader(httpResponse.getEntity().getContent()))) {
+            try (BufferedReader reader = new BufferedReader(new InputStreamReader(httpResponse.getEntity().getContent(), charset))) {
                 String inputLine;
 
                 while ((inputLine = reader.readLine()) != null) {
@@ -308,6 +311,10 @@ public class HTTPManager {
 
     public void setParameter(String parameterString) {
         this.parameterString = parameterString;
+    }
+
+    public void setCharset(String charset) {
+        this.charset = charset;
     }
 
     public void printOneLineLog() {
