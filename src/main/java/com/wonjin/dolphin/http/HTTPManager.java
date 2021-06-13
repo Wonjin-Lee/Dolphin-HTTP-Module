@@ -3,12 +3,15 @@ package com.wonjin.dolphin.http;
 import com.wonjin.dolphin.constants.HTTPConstants;
 import com.wonjin.dolphin.http.protocol.Protocol;
 import com.wonjin.dolphin.util.LogUtil;
-import com.wonjin.dolphin.util.StringUtil;
+import org.apache.http.HttpEntityEnclosingRequest;
+import org.apache.http.HttpRequest;
+import org.apache.http.client.HttpRequestRetryHandler;
 import org.apache.http.client.config.RequestConfig;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.client.methods.HttpRequestBase;
+import org.apache.http.client.protocol.HttpClientContext;
 import org.apache.http.config.Registry;
 import org.apache.http.config.RegistryBuilder;
 import org.apache.http.conn.socket.ConnectionSocketFactory;
@@ -20,6 +23,7 @@ import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.impl.client.LaxRedirectStrategy;
 import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
+import org.apache.http.protocol.HttpContext;
 import org.apache.http.ssl.SSLContextBuilder;
 import org.apache.http.ssl.TrustStrategy;
 import org.apache.log4j.Logger;
@@ -28,13 +32,17 @@ import javax.net.ssl.SSLContext;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.security.KeyManagementException;
-import java.security.KeyStoreException;
-import java.security.NoSuchAlgorithmException;
+import java.io.InterruptedIOException;
+import java.net.UnknownHostException;
+import java.security.GeneralSecurityException;
+import java.security.KeyStore;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.util.Map;
 
+/**
+ * HTTP 통신을 위한 클라이언트 클래스.
+ */
 public class HTTPManager {
     private static Logger logger = Logger.getLogger(HTTPManager.class);
 
@@ -45,6 +53,8 @@ public class HTTPManager {
     private int connectionRequestTimeout = 5000;
     private int socketTimeout = 5000;
 
+    private int retryCount = 2;
+
     // Default : HTTPS
     private Protocol protocol = Protocol.HTTPS;
 
@@ -52,20 +62,30 @@ public class HTTPManager {
     private String[] supportedProtocols;
     private String[] supportedCipherSuites;
 
+    private KeyStore keyStore;
+    private String keyStorePassword = "";
+
     private String url = "";
 
     private Map<String, String> headerMap;
+    
     private String parameterString;
+    private String charset = "UTF-8";
 
     private CloseableHttpClient httpClient;
     private CloseableHttpResponse httpResponse;
 
     private String responseBodyText = "";
 
+
     /**
-     * GET 방식을 사용하여 HTTP 요청 보내는 메서드
+     * GET 방식을 사용하여 HTTP 요청 보낸 후 Response Body를 문자열 형태로 반환한다.
+     *
+     * @return	HTTP 요청에 대한 응답으로 받은 문자열 형태의 Response Body
+     * @throws	IOException
+     * @throws	GeneralSecurityException
      */
-    public String get() throws NoSuchAlgorithmException, KeyStoreException, KeyManagementException, IOException {
+    public String get() throws IOException, GeneralSecurityException {
         try {
             httpClient = getClient();
 
@@ -82,7 +102,7 @@ public class HTTPManager {
 
             StringBuilder responseBuilder = new StringBuilder();
 
-            try (BufferedReader reader = new BufferedReader(new InputStreamReader(httpResponse.getEntity().getContent()))) {
+            try (BufferedReader reader = new BufferedReader(new InputStreamReader(httpResponse.getEntity().getContent(), charset))) {
                 String inputLine;
 
                 while ((inputLine = reader.readLine()) != null) {
@@ -103,9 +123,13 @@ public class HTTPManager {
     }
 
     /**
-     * POST 방식을 사용하여 HTTP 요청 보내는 메서드
+     * POST 방식을 사용하여 HTTP 요청 보낸 후 Response Body를 문자열 형태로 반환한다.
+     *
+     * @return	HTTP 요청에 대한 응답으로 받은 문자열 형태의 Response Body
+     * @throws	IOException
+     * @throws	GeneralSecurityException
      */
-    public String post() throws NoSuchAlgorithmException, KeyStoreException, KeyManagementException, IOException {
+    public String post() throws IOException, GeneralSecurityException {
         try {
             httpClient = getClient();
 
@@ -124,7 +148,7 @@ public class HTTPManager {
 
             StringBuilder responseBuilder = new StringBuilder();
 
-            try (BufferedReader reader = new BufferedReader(new InputStreamReader(httpResponse.getEntity().getContent()))) {
+            try (BufferedReader reader = new BufferedReader(new InputStreamReader(httpResponse.getEntity().getContent(), charset))) {
                 String inputLine;
 
                 while ((inputLine = reader.readLine()) != null) {
@@ -145,7 +169,7 @@ public class HTTPManager {
     }
 
     /**
-     * Header Setting
+     * 멤버변수 headerMap에 저장된 헤더값을 인자로 들어온 Request 인스턴스에 세팅한다.
      */
     private void setHeader(HttpRequestBase httpRequestBase) {
         if (headerMap != null) {
@@ -156,9 +180,12 @@ public class HTTPManager {
     }
 
     /**
-     * Create HTTP/HTTPS Client
+     * 설정된 통신 프로토콜(멤버변수 protocol)에 기반하여 HttpClient를 생성한 뒤 반환한다.
+     *
+     * @throws	GeneralSecurityException
+     * @return	설정된 통신 프로토콜에 기반한 CloseableHttpClient 인스턴스
      */
-    private CloseableHttpClient getClient() throws KeyStoreException, NoSuchAlgorithmException, KeyManagementException {
+    private CloseableHttpClient getClient() throws GeneralSecurityException {
         if (Protocol.HTTP == protocol) {
             return createHttpClient();
         }
@@ -166,7 +193,9 @@ public class HTTPManager {
     }
 
     /**
-     * HTTP Client
+     * HTTP 프로토콜 기반의 HttpClient를 생성한 뒤 반환한다.
+     *
+     * @return	HTTP 프로토콜 기반의 CloseableHttpClient 인스턴스
      */
     private CloseableHttpClient createHttpClient() {
         PoolingHttpClientConnectionManager connectionManager = new PoolingHttpClientConnectionManager();
@@ -174,14 +203,17 @@ public class HTTPManager {
         connectionManager.setMaxTotal(maxConnectionsTotal);
         connectionManager.setDefaultMaxPerRoute(maxConnectionsPerRoute);
 
-        return HttpClients.custom().setConnectionManager(connectionManager)
+        return HttpClients.custom().setConnectionManager(connectionManager).setRetryHandler(createRetryHandler(retryCount))
                 .setRedirectStrategy(new LaxRedirectStrategy()).build();
     }
 
     /**
-     * SSL HTTP Client
+     * HTTPS 프로토콜 기반의 HttpClient를 생성한 뒤 반환한다.
+     *
+     * @return	HTTPS 프로토콜 기반의 CloseableHttpClient 인스턴스
+     * @throws	GeneralSecurityException
      */
-    private CloseableHttpClient createSSLHttpClient() throws KeyStoreException, NoSuchAlgorithmException, KeyManagementException {
+    private CloseableHttpClient createSSLHttpClient() throws GeneralSecurityException {
         TrustStrategy trustStrategy = new TrustStrategy() {
             @Override
             public boolean isTrusted(X509Certificate[] chain, String authTypes) throws CertificateException {
@@ -193,7 +225,7 @@ public class HTTPManager {
             tlsVersion = HTTPConstants.TLSv1_2;
         }
 
-        SSLContext sslContext = new SSLContextBuilder().loadTrustMaterial(null, trustStrategy).useProtocol(tlsVersion).build();
+        SSLContext sslContext = new SSLContextBuilder().loadKeyMaterial(keyStore, keyStorePassword.toCharArray()).loadTrustMaterial(trustStrategy).useProtocol(tlsVersion).build();
 
         if (supportedProtocols == null) {
             supportedProtocols = new String[] {HTTPConstants.TLSv1_1, HTTPConstants.TLSv1_2};
@@ -212,7 +244,42 @@ public class HTTPManager {
         connectionManager.setMaxTotal(maxConnectionsTotal);
         connectionManager.setDefaultMaxPerRoute(maxConnectionsPerRoute);
 
-        return HttpClients.custom().setSSLContext(sslContext).setConnectionManager(connectionManager).build();
+        return HttpClients.custom().setSSLContext(sslContext).setConnectionManager(connectionManager).setRetryHandler(createRetryHandler(retryCount)).build();
+    }
+
+    /**
+     * HTTP 통신이 실패할 경우 인자로 받은 재시도 횟수 만큼 다시 요청하는 Retry Handler를 생성 후 반환한다.
+     *
+     * @param	IOException 발생할 경우 재시도할 횟수
+     * @return	HttpRequestRetryHandler 구현체
+     */
+    private HttpRequestRetryHandler createRetryHandler(final int retryCount) {
+        return new HttpRequestRetryHandler() {
+            @Override
+            public boolean retryRequest(IOException exception, int executionCount, HttpContext context) {
+                if (executionCount >= retryCount) {
+                    return false;
+                }
+
+                if (exception instanceof InterruptedIOException) { // Interrupted
+                    return false;
+                }
+
+                if (exception instanceof UnknownHostException) { // Unknown host
+                    return false;
+                }
+
+                HttpClientContext clientContext = HttpClientContext.adapt(context);
+                HttpRequest request = clientContext.getRequest();
+                boolean idempotent = !(request instanceof HttpEntityEnclosingRequest);
+
+                if (idempotent) {
+                    return true;
+                }
+
+                return false;
+            }
+        };
     }
 
     public void setProtocol(Protocol protocol) {
@@ -237,6 +304,11 @@ public class HTTPManager {
         this.supportedCipherSuites = supportedCipherSuites;
     }
 
+    public void setKeyStore(KeyStore keyStore, String keyStorePassword) {
+        this.keyStore = keyStore;
+        this.keyStorePassword = keyStorePassword;
+    }
+
     public void setMaxConnectionsPerRoute(int maxConnectionsPerRoute) {
         this.maxConnectionsPerRoute = maxConnectionsPerRoute;
     }
@@ -257,6 +329,10 @@ public class HTTPManager {
         this.socketTimeout = socketTimeout;
     }
 
+    public void setRetryCount(int retryCount) {
+        this.retryCount = retryCount;
+    }
+
     public void setUrl(String url) {
         this.url = url;
     }
@@ -269,6 +345,13 @@ public class HTTPManager {
         this.parameterString = parameterString;
     }
 
+    public void setCharset(String charset) {
+        this.charset = charset;
+    }
+
+    /**
+     * HTTP 통신 과정에서 주고 받은 요청, 응답 메시지에 대한 로그를 출력한다.
+     */
     public void printOneLineLog() {
         // Request Header
         String requestHeaderText = LogUtil.mapToLogString(headerMap);
