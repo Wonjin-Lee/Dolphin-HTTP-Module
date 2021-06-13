@@ -28,7 +28,7 @@ Apache Components의 HttpClient를 활용하여 만든 HTTP 클라이언트입�
 
 ```java
 import com.wonjin.dolphin.http.HTTPManager;
-import com.wonjin.dolphin.constants.HTTPConstants;
+import com.wonjin.dolphin.http.protocol.ProtocolVersion;
 import com.wonjin.dolphin.http.protocol.Protocol;
 import java.io.InputStream;import java.security.KeyStore;
 
@@ -46,10 +46,10 @@ public class Example {
                  - Protocol.HTTP
                  - Protocol.HTTPS
             
-            2. TLS 버전 : 상수 공개용 클래스 HTTPConstants에 있는 상수를 인자로 넣어 설정 (Default는 TLSv1.2)
-               - HTTPConstants.TLSv1 : TLSv1.0
-               - HTTPConstants.TLSv1_1 : TLSv1.1
-               - HTTPConstants.TLSv1_2 : TLSv1.2
+            2. TLS 버전 : ProtocolVersion Enum 클래스에 있는 열거 상수를 인자로 넣어 설정 (Default는 TLSv1.2)
+               - ProtocolVersion.TLS_1 : TLSv1.0
+               - ProtocolVersion.TLS_1_1 : TLSv1.1
+               - ProtocolVersion.TLS_1_2 : TLSv1.2
                
             3. SupportedProtocols : 서버 측에 어떤 TLS 버전으로 통신이 가능한지를 알려주기 위한 값 (Default는 {TLSv1.1, TLSv1.2})
             
@@ -60,13 +60,13 @@ public class Example {
         httpManager.setProtocol(Protocol.HTTPS);
         
         // 2. 통신 방법, TLS 버전 설정
-        httpManager.setProtocol(Protocol.HTTPS, HTTPConstants.TLSv1_2);
+        httpManager.setProtocol(Protocol.HTTPS, ProtocolVersion.TLS_1_2);
         
         // 3. 통신 방법, TLS 버전, SupportedProtocols 설정
-        httpManager.setProtocol(Protocol.HTTPS, HTTPConstants.TLSv1_2, new String[] {HTTPConstants.TLSv1_1, HTTPConstants.TLSv1_2})
+        httpManager.setProtocol(Protocol.HTTPS, ProtocolVersion.TLS_1_2, new String[] {ProtocolVersion.TLS_1_1, ProtocolVersion.TLS_1_2})
         
         // 4. 통신 방법, TLS 버전, SupportedProtocols, SupportedCipherSuites 설정
-        httpManager.setProtocol(Protocol.HTTPS, HTTPConstants.TLSv1_2, new String[] {HTTPConstants.TLSv1_1, HTTPConstants.TLSv1_2}, new String[] {"TLS_RSA_WITH_AES_128_CBC_SHA256"});
+        httpManager.setProtocol(Protocol.HTTPS, ProtocolVersion.TLS_1_2, new String[] {ProtocolVersion.TLS_1_1, ProtocolVersion.TLS_1_2}, new String[] {"TLS_RSA_WITH_AES_128_CBC_SHA256"});
         
         // URL 설정
         httpManager.setUrl("https://wonjin.com");
