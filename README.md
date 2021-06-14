@@ -30,7 +30,8 @@ Apache Components의 HttpClient를 활용하여 만든 HTTP 클라이언트입�
 import com.wonjin.dolphin.http.HTTPManager;
 import com.wonjin.dolphin.http.protocol.ProtocolVersion;
 import com.wonjin.dolphin.http.protocol.Protocol;
-import java.io.InputStream;import java.security.KeyStore;
+import java.io.InputStream;
+import java.security.KeyStore;
 
 public class Example {
     public static void main(String[] args) {
