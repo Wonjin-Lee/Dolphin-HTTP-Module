@@ -9,7 +9,6 @@ Apache Components의 HttpClient를 활용하여 만든 HTTP 클라이언트입�
 * Supported Cipher Suites 설정 가능
 * KeyStore(Certificate) 로딩 기능 지원
 * Connection Pool 관련 설정 가능
-* 재시도 횟수(Retry Count) 설정 기능 
 * log4j를 이용한 로깅 지원
 * One Line Log 출력
 
@@ -64,10 +63,10 @@ public class Example {
         httpManager.setProtocol(Protocol.HTTPS, ProtocolVersion.TLS_1_2);
         
         // 3. 통신 방법, TLS 버전, SupportedProtocols 설정
-        httpManager.setProtocol(Protocol.HTTPS, ProtocolVersion.TLS_1_2, new String[] {ProtocolVersion.TLS_1_1, ProtocolVersion.TLS_1_2})
+        httpManager.setProtocol(Protocol.HTTPS, ProtocolVersion.TLS_1_2, new String[] {"TLSv1.1", "TLSv1.2"})
         
         // 4. 통신 방법, TLS 버전, SupportedProtocols, SupportedCipherSuites 설정
-        httpManager.setProtocol(Protocol.HTTPS, ProtocolVersion.TLS_1_2, new String[] {ProtocolVersion.TLS_1_1, ProtocolVersion.TLS_1_2}, new String[] {"TLS_RSA_WITH_AES_128_CBC_SHA256"});
+        httpManager.setProtocol(Protocol.HTTPS, ProtocolVersion.TLS_1_2, new String[] {"TLSv1.1", "TLSv1.2"}, new String[] {"TLS_RSA_WITH_AES_128_CBC_SHA256"});
         
         // URL 설정
         httpManager.setUrl("https://wonjin.com");
@@ -92,9 +91,6 @@ public class Example {
 
         httpManager.setKeyStore(keyStore, password);
 
-        // Retry Count 설정 (Default는 2)
-        httpManager.setRetryCount(3);
-        
         Map<String, String> headerMap = new HashMap<>();
         headerMap.put("Content-Type", "application/x-www-form-urlencoded;charset=utf-8");
         
@@ -157,3 +153,4 @@ public class Example {
 * 1.0.0 - Deploy First Version
 * 1.1.0 - 모듈성을 높이기 위해 요청 파라미터를 문자열 형태로 세팅하도록 변경
 * 1.2.0 - KeyStore(Certificate) 로드 기능, 재시도 횟수 설정 기능 추가
+* 1.2.1 - 내부 로직 리팩토링
